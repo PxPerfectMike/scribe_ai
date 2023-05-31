@@ -6,6 +6,7 @@ import { DefaultButton } from "@fluentui/react";
 
 const ModificationForm = () => {
   const [response, setResponse] = useState("");
+  const [commandOutput, setCommandOutput] = useState("");
 
   const handleClick = async (e) => {
     e.preventDefault();
@@ -25,9 +26,11 @@ const ModificationForm = () => {
       });
 
       setResponse(result.data.choices[0].text.trim());
+      setCommandOutput("Success!");
     } catch (error) {
       console.error(error);
       setResponse("An error occurred. Please try again.");
+      setCommandOutput("Error!");
     }
   };
 
@@ -40,8 +43,9 @@ const ModificationForm = () => {
         alignItems: "center",
       }}
     >
+      <textarea value={commandOutput} readOnly style={{ margin: "1%" }} />
       <textarea value={response} readOnly style={{ margin: "1%" }} />
-      <DefaultButton onClick={handleClick}>Modify</DefaultButton>
+      <DefaultButton onClick={handleClick}>Summarize</DefaultButton>
     </div>
   );
 };
