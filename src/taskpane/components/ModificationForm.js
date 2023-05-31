@@ -60,6 +60,7 @@ const ModificationForm = () => {
         return newContext.sync();
       });
       setProcessing(false);
+      setIdle(false);
       setCommandOutput("Success!");
 
       let charArray = result.data.choices[0].text.trim().split("");
@@ -74,6 +75,7 @@ const ModificationForm = () => {
         });
       }
       setCommandOutput("");
+      setIdle(true);
     } catch (error) {
       console.error(error);
       setCommandOutput("Error!");
