@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import Progress from "./Progress";
 import ModificationForm from "./ModificationForm";
 import Header from "./Header";
+import logo from "../../../assets/logo-filled.png";
 
 class App extends React.Component {
   constructor(props) {
@@ -18,7 +19,7 @@ class App extends React.Component {
 
     return (
       <div>
-        <Header message="Cindy AI" />
+        <Header message="Cindy AI" logo={logo} />
         <ModificationForm />
       </div>
     );
