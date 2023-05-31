@@ -21,8 +21,7 @@ const ModificationForm = () => {
       });
 
       const result = await axios.post("https://us-central1-cindyai.cloudfunctions.net/openai-cindy-request", {
-        // prompt: `summarize this text:${highlight}`,
-        prompt: `Translate this to Telgu:${highlight}`,
+        prompt: `summarize this text:${highlight}`,
       });
 
       setResponse(result.data.choices[0].text.trim());
