@@ -46,7 +46,7 @@ const ModificationForm = () => {
       const prompt =
         action === "summarize"
           ? `summarize this text ${context.highlight}`
-          : "translate"
+          : action === "translate"
           ? `translate this text ${context.highlight} to ${selectedLanguage}`
           : `elaborate this text ${context.highlight}`;
 
