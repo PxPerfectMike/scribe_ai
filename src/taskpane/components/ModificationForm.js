@@ -43,6 +43,20 @@ const ModificationForm = () => {
         return { highlight: highlight.text, context: context };
       });
 
+      if (context.highlight.length === 0) {
+        setCommandOutput("No text selected");
+        setIdle(false);
+        setProcessing(false);
+        return;
+      }
+
+      if (context.highlight.length > 5200) {
+        setCommandOutput(`Character count ${context.highlight.length} (max 5200)`);
+        setIdle(false);
+        setProcessing(false);
+        return;
+      }
+
       let prompt = "";
       // Change the prompt based on the action
       switch (action) {
@@ -78,6 +92,9 @@ const ModificationForm = () => {
         const selection = newContext.document.getSelection();
         selection.insertText("", Word.InsertLocation.replace);
         await newContext.sync();
+        setProcessing(false);
+        setIdle(false);
+        setCommandOutput("Success!");
 
         for (let i = 0; i < charArray.length; i++) {
           await new Promise((resolve) => setTimeout(resolve, 10));
@@ -86,10 +103,8 @@ const ModificationForm = () => {
         }
       });
 
-      setProcessing(false);
-      setIdle(false);
-      setCommandOutput("Success!");
       setIdle(true);
+      setCommandOutput("");
     } catch (error) {
       console.error(error);
       setCommandOutput("Error!");
@@ -116,13 +131,14 @@ const ModificationForm = () => {
           color: commandOutput === "Success!" ? "green" : "Processing..." ? "black" : "red",
           borderRadius: "2px",
           margin: "2% auto",
+          width: "90%",
         }}
       >
         <strong
           style={{
             color: "white",
             float: "left",
-            width: "30%",
+            width: "20%",
             margin: 0,
             backgroundColor: "gray",
           }}
@@ -131,36 +147,60 @@ const ModificationForm = () => {
         </strong>
         {processing ? "Processing..." : idle ? "Idle" : commandOutput}
       </div>
-      <div className="formatting-section" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <h4>Formatting</h4>
-        <DefaultButton
-          style={{ marginBottom: "6%", width: "100%" }}
-          onClick={(e) => handleClick("summarize", e)}
-          disabled={processing}
+      <h4>Formatting</h4>
+      <div className="formatting-section" style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+        <div
+          className="restructure-buttons"
+          style={{
+            paddingY: "2%",
+            display: "flex",
+            flexDirection: "column",
+            width: "auto",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
-          Summarize
-        </DefaultButton>
-        <DefaultButton
-          style={{ marginBottom: "2%", width: "100%" }}
-          onClick={(e) => handleClick("elaborate", e)}
-          disabled={processing}
+          <DefaultButton
+            style={{ marginBottom: "6%", width: "50%" }}
+            onClick={(e) => handleClick("summarize", e)}
+            disabled={processing}
+          >
+            Summarize
+          </DefaultButton>
+          <DefaultButton
+            style={{ marginBottom: "2%", width: "50%" }}
+            onClick={(e) => handleClick("elaborate", e)}
+            disabled={processing}
+          >
+            Elaborate
+          </DefaultButton>
+        </div>
+        <div
+          className="length-buttons"
+          style={{
+            paddingY: "2%",
+            display: "flex",
+            flexDirection: "column",
+            width: "auto",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
-          Elaborate
-        </DefaultButton>
-        <DefaultButton
-          style={{ marginBottom: "6%", width: "100%" }}
-          onClick={(e) => handleClick("shorten", e)}
-          disabled={processing}
-        >
-          Shorten
-        </DefaultButton>
-        <DefaultButton
-          style={{ marginBottom: "2%", width: "100%" }}
-          onClick={(e) => handleClick("lengthen", e)}
-          disabled={processing}
-        >
-          Lengthen
-        </DefaultButton>
+          <DefaultButton
+            style={{ marginBottom: "6%", width: "50%" }}
+            onClick={(e) => handleClick("shorten", e)}
+            disabled={processing}
+          >
+            Shorten
+          </DefaultButton>
+          <DefaultButton
+            style={{ marginBottom: "2%", width: "50%" }}
+            onClick={(e) => handleClick("lengthen", e)}
+            disabled={processing}
+          >
+            Lengthen
+          </DefaultButton>
+        </div>
       </div>
       <div className="translate-section" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
         <h4>Translation</h4>

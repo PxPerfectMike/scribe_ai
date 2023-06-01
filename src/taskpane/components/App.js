@@ -19,7 +19,7 @@ class App extends React.Component {
 
     return (
       <div>
-        <Header message="Cindy AI" logo={logo} style={{ userSelect: "none" }} />
+        <Header message="Cindy AI" logo={logo} />
         <ModificationForm />
       </div>
     );
