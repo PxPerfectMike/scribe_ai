@@ -43,38 +43,52 @@ const ModificationForm = () => {
         return { highlight: highlight.text, context: context };
       });
 
-      const prompt =
-        action === "summarize"
-          ? `summarize this text ${context.highlight}`
-          : action === "translate"
-          ? `translate this text ${context.highlight} to ${selectedLanguage}`
-          : `elaborate this text ${context.highlight}`;
+      let prompt = "";
+      // Change the prompt based on the action
+      switch (action) {
+        case "summarize":
+          prompt = `summarize the following text:\n ${context.highlight}`;
+          break;
+        case "translate":
+          prompt = `translate this text: \n ${context.highlight} /n/n to ${selectedLanguage}`;
+          break;
+        case "elaborate":
+          prompt = `elaborate this text by adding context and intricacy:\n ${context.highlight}`;
+          break;
+        case "shorten":
+          prompt = `shorten this text by half its length:\n ${context.highlight}`;
+          break;
+        case "lengthen":
+          prompt = `lengthen this text by 50% its current length:\n ${context.highlight}`;
+          break;
+        default:
+          break;
+      }
+
+      console.log(prompt);
 
       const result = await axios.post("https://us-central1-cindyai.cloudfunctions.net/openai-cindy-request", {
         prompt: prompt,
       });
 
-      await Word.run(context.context, (newContext) => {
+      let resultText = result.data.choices[0].text.trim();
+      let charArray = resultText.split("");
+
+      await Word.run(context.context, async (newContext) => {
         const selection = newContext.document.getSelection();
         selection.insertText("", Word.InsertLocation.replace);
-        return newContext.sync();
+        await newContext.sync();
+
+        for (let i = 0; i < charArray.length; i++) {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          selection.insertText(charArray[i], Word.InsertLocation.end);
+          await newContext.sync();
+        }
       });
+
       setProcessing(false);
       setIdle(false);
       setCommandOutput("Success!");
-
-      let charArray = result.data.choices[0].text.trim().split("");
-
-      for (let i = 0; i < charArray.length; i++) {
-        await new Promise((resolve) => setTimeout(resolve, 10));
-
-        await Word.run(context.context, (newContext) => {
-          const body = newContext.document.body;
-          body.insertText(charArray[i], Word.InsertLocation.end);
-          return newContext.sync();
-        });
-      }
-      setCommandOutput("");
       setIdle(true);
     } catch (error) {
       console.error(error);
@@ -128,10 +142,24 @@ const ModificationForm = () => {
         </DefaultButton>
         <DefaultButton
           style={{ marginBottom: "2%", width: "100%" }}
-          onClick={(e) => handleClick("summarize", e)}
+          onClick={(e) => handleClick("elaborate", e)}
           disabled={processing}
         >
           Elaborate
+        </DefaultButton>
+        <DefaultButton
+          style={{ marginBottom: "6%", width: "100%" }}
+          onClick={(e) => handleClick("shorten", e)}
+          disabled={processing}
+        >
+          Shorten
+        </DefaultButton>
+        <DefaultButton
+          style={{ marginBottom: "2%", width: "100%" }}
+          onClick={(e) => handleClick("lengthen", e)}
+          disabled={processing}
+        >
+          Lengthen
         </DefaultButton>
       </div>
       <div className="translate-section" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
