@@ -5,7 +5,6 @@ import { DefaultButton, Dropdown } from "@fluentui/react";
 /* global Word */
 
 const ModificationForm = () => {
-  const [response, setResponse] = useState("");
   const [commandOutput, setCommandOutput] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState(null);
   const [processing, setProcessing] = useState(false);
@@ -85,6 +84,7 @@ const ModificationForm = () => {
         prompt: prompt,
       });
 
+      // it would be a good idea to combine the following two lines into one function by adding split to the result text and replace all the charArray with resultText
       let resultText = result.data.choices[0].text.trim();
       let charArray = resultText.split("");
 
@@ -92,10 +92,13 @@ const ModificationForm = () => {
         const selection = newContext.document.getSelection();
         selection.insertText("", Word.InsertLocation.replace);
         await newContext.sync();
+
+        // reduce app state to one function that has finite state
         setProcessing(false);
         setIdle(false);
         setCommandOutput("Success!");
 
+        // this is a hacky way to get the text to type out one character at a time
         for (let i = 0; i < charArray.length; i++) {
           await new Promise((resolve) => setTimeout(resolve, 10));
           selection.insertText(charArray[i], Word.InsertLocation.end);
