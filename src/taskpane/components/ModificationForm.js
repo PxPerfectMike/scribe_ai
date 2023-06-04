@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { DefaultButton, Dropdown } from "@fluentui/react";
+import Header from "./Header";
+import logo from "../../../assets/logo-filled.png";
 
 /* global Word */
 
@@ -118,13 +120,19 @@ const ModificationForm = () => {
 
   return (
     <div
+      className="top-level-container"
       style={{
         display: "flex",
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
+        background: "linear-gradient(#aa7e1e, #aa381e, #aa7e1e)",
+        height: "100vh",
       }}
     >
+      <div className="header">
+        <Header message="Cindy AI" logo={logo} />
+      </div>
       <div
         style={{
           border: "1px solid black",
@@ -133,8 +141,9 @@ const ModificationForm = () => {
           marginTop: "10px",
           color: commandOutput === "Success!" ? "green" : "Processing..." ? "black" : "red",
           borderRadius: "2px",
-          margin: "2% auto",
+          margin: "2%",
           width: "90%",
+          backgroundColor: "#f5f5f5",
         }}
       >
         <strong
@@ -148,7 +157,9 @@ const ModificationForm = () => {
         >
           Status:{" "}
         </strong>
-        {processing ? "Processing..." : idle ? "Idle" : commandOutput}
+        <p className="status-output" style={{ margin: 0, textAlign: "center" }}>
+          {processing ? "Processing..." : idle ? "Idle" : commandOutput}
+        </p>
       </div>
       <h4>Formatting</h4>
       <div className="formatting-section" style={{ display: "flex", justifyContent: "center", width: "100%" }}>

@@ -17,9 +17,7 @@ ul {
 }
 
 .ms-welcome__header {
-  padding: 20px;
-  padding-bottom: 30px;
-  padding-top: 100px;
+  padding: 20px 10px;
   display: -webkit-flex;
   display: flex;
   -webkit-flex-direction: column;
@@ -77,4 +75,9 @@ ul {
 
 b {
   font-weight: bold;
+}
+
+#container {
+  height: 100vh;
+  /* background-color: #04aeec; */
 }

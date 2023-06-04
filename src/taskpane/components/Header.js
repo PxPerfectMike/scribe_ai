@@ -6,19 +6,40 @@ export default class Header extends React.Component {
     const { title, logo, message } = this.props;
 
     return (
-      <section className="ms-welcome__header ms-bgColor-neutralLighter ms-u-fadeIn500">
-        <img width="90" height="90" src={logo} alt={title} title={title} style={{ userSelect: "none" }} />
+      <section
+        className="ms-welcome__header ms-bgColor-neutralLighter ms-u-fadeIn500"
+        style={{ backgroundColor: "transparent" }}
+      >
+        <img
+          width="30%"
+          height="40%"
+          src={logo}
+          alt={title}
+          title={title}
+          style={{
+            userSelect: "none",
+            // border: "4px solid red",
+            borderRadius: "50%",
+            boxShadow: "0px 0px 10px 10px red",
+          }}
+        />
         <h1
           className="ms-fontSize-su ms-fontWeight-light ms-fontColor-neutralPrimary"
-          style={{ userSelect: "none", fontFamily: "Times New Roman, serif" }}
+          style={{ userSelect: "none", fontFamily: "Times New Roman, serif", margin: "3% auto", color: "white" }}
         >
           {message}
         </h1>
         <h2
           className="ms-fontSize-l ms-fontWeight-light ms-fontColor-neutralPrimary"
-          style={{ userSelect: "none", fontFamily: "Times New Roman, serif", margin: "auto", textAlign: "center" }}
+          style={{
+            userSelect: "none",
+            fontFamily: "Times New Roman, serif",
+            margin: "auto",
+            textAlign: "center",
+            color: "white",
+          }}
         >
-          Highlight text and click a button to modify it!
+          Highlight text and modify it!
         </h2>
       </section>
     );

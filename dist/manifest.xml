@@ -8,19 +8,23 @@
   <Description DefaultValue="A simple AI productivity tool to aid document restructuring."/>
   <IconUrl DefaultValue="https://cindyaistorage.z1.web.core.windows.net/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://cindyaistorage.z1.web.core.windows.net/assets/icon-64.png"/>
-  <SupportUrl DefaultValue="https://support.office.com/f1/home?isAgave=true&et=#"/>
+  <SupportUrl DefaultValue="https://support.office.com"/>
   <AppDomains>
-    <AppDomain>https://cindyaistorage.z1.web.core.windows.net/</AppDomain>
+    <AppDomain>https://cindyaistorage.z1.web.core.windows.net</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Document"/>
   </Hosts>
+  <Requirements>
+  <Sets>
+    <Set Name="WordApi" MinVersion="1.1"/>
+  </Sets>
+</Requirements>
   <DefaultSettings>
     <SourceLocation DefaultValue="https://cindyaistorage.z1.web.core.windows.net/taskpane.html"/>
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
-  <Set name="WordApi 1.3">
     <Hosts>
       <Host xsi:type="Document">
         <DesktopFormFactor>
@@ -61,7 +65,6 @@
         </DesktopFormFactor>
       </Host>
     </Hosts>
-    </Set>
     <Resources>
       <bt:Images>
         <bt:Image id="Icon.16x16" DefaultValue="https://cindyaistorage.z1.web.core.windows.net/assets/icon-16.png"/>

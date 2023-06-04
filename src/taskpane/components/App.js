@@ -19,7 +19,7 @@ class App extends React.Component {
 
     return (
       <div>
-        <Header message="Cindy AI" logo={logo} />
+        {/* <Header message="Cindy AI" logo={logo} /> */}
         <ModificationForm />
       </div>
     );
