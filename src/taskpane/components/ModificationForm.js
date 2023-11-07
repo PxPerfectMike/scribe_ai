@@ -4,8 +4,6 @@ import { DefaultButton, Dropdown } from "@fluentui/react";
 import Header from "./Header";
 import logo from "../../../assets/logo-filled.png";
 
-/* global Word */
-
 const ModificationForm = () => {
   const [commandOutput, setCommandOutput] = useState("");
   const [selectedLanguage, setSelectedLanguage] = useState(null);
@@ -131,7 +129,7 @@ const ModificationForm = () => {
       }}
     >
       <div className="header">
-        <Header message="Cindy AI" logo={logo} />
+        <Header message="Fionn Scribe" logo={logo} />
       </div>
       <div
         style={{
