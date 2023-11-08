@@ -25,7 +25,7 @@ export default class Header extends React.Component {
         />
         <h1
           className="ms-fontSize-su ms-fontWeight-light ms-fontColor-neutralPrimary"
-          style={{ userSelect: "none", fontFamily: "Times New Roman, serif", margin: "3% auto", color: "white" }}
+          style={{ userSelect: "none", fontFamily: "'Edu TAS Beginner', cursive", margin: "3% auto", color: "#070706" }}
         >
           {message}
         </h1>

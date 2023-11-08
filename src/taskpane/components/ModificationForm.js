@@ -124,7 +124,7 @@ const ModificationForm = () => {
         flexDirection: "column",
         justifyContent: "center",
         alignItems: "center",
-        background: "linear-gradient(#aa7e1e, #aa381e, #aa7e1e)",
+        background: "linear-gradient(#00a1ff, #f5f5f5, #f5f5f5, #08A04B)",
         height: "100vh",
       }}
     >
