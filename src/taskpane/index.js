@@ -9,7 +9,7 @@ initializeIcons();
 
 let isOfficeInitialized = false;
 
-const title = "Contoso Task Pane Add-in";
+const title = "Fionn Scribe Add-in";
 
 const render = (Component) => {
   ReactDOM.render(
