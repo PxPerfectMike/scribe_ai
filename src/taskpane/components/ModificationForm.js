@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { DefaultButton, Dropdown } from "@fluentui/react";
 import Header from "./Header";
-import logo from "../../../assets/logo-filled.png";
+import logo from "../../../assets/full_logo.png";
 
 const ModificationForm = () => {
   const [commandOutput, setCommandOutput] = useState("");

@@ -19,13 +19,19 @@ export default class Header extends React.Component {
           style={{
             userSelect: "none",
             // border: "4px solid red",
-            borderRadius: "50%",
-            boxShadow: "0px 0px 10px 10px red",
+            // borderRadius: "50%",
+            // boxShadow: "0px 0px 10px 10px red",
           }}
         />
         <h1
           className="ms-fontSize-su ms-fontWeight-light ms-fontColor-neutralPrimary"
-          style={{ userSelect: "none", fontFamily: "'Edu TAS Beginner', cursive", margin: "3% auto", color: "#070706" }}
+          style={{
+            userSelect: "none",
+            fontFamily: "'Edu TAS Beginner', cursive",
+            margin: "3% auto",
+            color: "#070706",
+            fontWeight: "bold",
+          }}
         >
           {message}
         </h1>
@@ -33,10 +39,11 @@ export default class Header extends React.Component {
           className="ms-fontSize-l ms-fontWeight-light ms-fontColor-neutralPrimary"
           style={{
             userSelect: "none",
-            fontFamily: "Times New Roman, serif",
+            fontFamily: "'Edu TAS Beginner', cursive",
             margin: "auto",
             textAlign: "center",
-            color: "white",
+            color: "#070706",
+            fontWeight: "bold",
           }}
         >
           Highlight text and modify it!
