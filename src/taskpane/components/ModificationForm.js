@@ -125,11 +125,11 @@ const ModificationForm = () => {
         justifyContent: "center",
         alignItems: "center",
         background: "linear-gradient(#00a1ff, #f5f5f5, #f5f5f5, #08A04B)",
-        height: "100vh",
+        height: "100%", // used to be 100vh and might need to go back to that
       }}
     >
       <div className="header">
-        <Header message="Fionn Scribe" logo={logo} />
+        <Header message="Scribe!" logo={logo} />
       </div>
       <div
         style={{

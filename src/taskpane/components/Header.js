@@ -3,7 +3,18 @@ import PropTypes from "prop-types";
 
 export default class Header extends React.Component {
   render() {
-    const { title, logo, message } = this.props;
+    const { logo } = this.props;
+
+    const styles = {
+      maxLogoSize: "500px",
+      logoSize: "50%",
+      fontFamily: "'Edu TAS Beginner', cursive",
+    };
+
+    const data = {
+      title: "Scribe!",
+      titleCaption: "Highlight text and modify it!",
+    };
 
     return (
       <section
@@ -11,42 +22,40 @@ export default class Header extends React.Component {
         style={{ backgroundColor: "transparent" }}
       >
         <img
-          width="30%"
-          height="40%"
+          width={styles.logoSize}
+          height={styles.logoSize}
           src={logo}
-          alt={title}
-          title={title}
+          alt={data.title}
           style={{
             userSelect: "none",
-            // border: "4px solid red",
-            // borderRadius: "50%",
-            // boxShadow: "0px 0px 10px 10px red",
+            maxHeight: styles.maxLogoSize,
+            maxWidth: styles.maxLogoSize,
           }}
         />
         <h1
           className="ms-fontSize-su ms-fontWeight-light ms-fontColor-neutralPrimary"
           style={{
             userSelect: "none",
-            fontFamily: "'Edu TAS Beginner', cursive",
+            fontFamily: styles.fontFamily,
             margin: "3% auto",
             color: "#070706",
             fontWeight: "bold",
           }}
         >
-          {message}
+          {data.title}
         </h1>
         <h2
           className="ms-fontSize-l ms-fontWeight-light ms-fontColor-neutralPrimary"
           style={{
             userSelect: "none",
-            fontFamily: "'Edu TAS Beginner', cursive",
+            fontFamily: styles.fontFamily,
             margin: "auto",
             textAlign: "center",
             color: "#070706",
             fontWeight: "bold",
           }}
         >
-          Highlight text and modify it!
+          {data.titleCaption}
         </h2>
       </section>
     );
@@ -54,7 +63,5 @@ export default class Header extends React.Component {
 }
 
 Header.propTypes = {
-  title: PropTypes.string,
   logo: PropTypes.string,
-  message: PropTypes.string,
 };

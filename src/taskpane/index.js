@@ -9,7 +9,7 @@ initializeIcons();
 
 let isOfficeInitialized = false;
 
-const title = "Fionn Scribe Add-in";
+const title = "Scribe! Micorsoft Word Add-in by Fionn";
 
 const render = (Component) => {
   ReactDOM.render(

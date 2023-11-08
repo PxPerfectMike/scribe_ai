@@ -16,8 +16,7 @@ class App extends React.Component {
     }
 
     return (
-      <div>
-        {/* <Header message="Cindy AI" logo={logo} /> */}
+      <div style={{ height: "100vh" }}>
         <ModificationForm />
       </div>
     );
