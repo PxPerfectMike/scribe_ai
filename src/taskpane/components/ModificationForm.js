@@ -127,7 +127,7 @@ const ModificationForm = () => {
       }}
     >
       <div className="header">
-        <Header message="Scribe!" logo={logo} />
+        <Header logo={logo} />
       </div>
       <div
         style={{
