@@ -78,8 +78,6 @@ const ModificationForm = () => {
           break;
       }
 
-      console.log(prompt);
-
       const result = await axios.post("https://us-central1-cindyai.cloudfunctions.net/openai-cindy-request", {
         prompt: prompt,
       });
