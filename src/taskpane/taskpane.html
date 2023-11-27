@@ -6,7 +6,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Scribe! Microsoft Word Add-in by Fionn</title>
 
     <!-- Office JavaScript API -->
@@ -23,9 +23,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Edu+TAS+Beginner&display=swap" rel="stylesheet" />
+    <style>
+      .smooth-text {
+        -webkit-font-smoothing: antialiased; /* Chrome, Safari */
+        -moz-osx-font-smoothing: grayscale; /* Firefox */
+        text-rendering: optimizeLegibility;
+        transform: translate3d(0, 0, 0); /* Trigger GPU acceleration for smoother rendering */
+      }
+    </style>
   </head>
 
   <body class="ms-font-m ms-Fabric">
-    <div id="container"></div>
+    <div id="container" class="smooth-text"></div>
   </body>
 </html>

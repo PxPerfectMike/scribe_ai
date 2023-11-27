@@ -26,7 +26,6 @@ const ModificationForm = () => {
     { key: "hindi", text: "Hindi" },
     { key: "hebrew", text: "Hebrew" },
     { key: "vietnamese", text: "Vietnamese" },
-    // Add other languages here...
   ];
 
   const handleClick = async (action, e) => {
