@@ -5,10 +5,8 @@ import Header from "./Header";
 import logo from "../../../assets/full_logo.png";
 
 const ModificationForm = () => {
-  const [commandOutput, setCommandOutput] = useState("");
+  const [status, setStatus] = useState({ state: "idle", message: "Waiting..." });
   const [selectedLanguage, setSelectedLanguage] = useState(null);
-  const [processing, setProcessing] = useState(false);
-  const [idle, setIdle] = useState(true);
 
   const languageOptions = [
     { key: "chinese-simplified", text: "Chinese (Simplified)" },
@@ -28,88 +26,90 @@ const ModificationForm = () => {
     { key: "vietnamese", text: "Vietnamese" },
   ];
 
+  const fetchAndProcessText = async (action, context) => {
+    let prompt = getPromptForAction(action, context.highlight);
+    const result = await axios.post("https://us-central1-cindyai.cloudfunctions.net/openai-cindy-request", { prompt });
+    return result.data.choices[0].text.trim();
+  };
+
+  const getPromptForAction = (action, text) => {
+    switch (action) {
+      case "summarize":
+        return `summarize the following text:\n ${text}`;
+      case "translate":
+        return `translate this text: \n ${text} /n/n to ${selectedLanguage}`;
+      case "elaborate":
+        return `elaborate this text by adding context and intricacy:\n ${text}`;
+      case "shorten":
+        return `shorten this text by half its length:\n ${text}`;
+      case "lengthen":
+        return `lengthen this text by 50% its current length:\n ${text}`;
+      default:
+        return "";
+    }
+  };
+
   const handleClick = async (action, e) => {
     e.preventDefault();
-    setProcessing(true);
+    setStatus({ state: "processing", message: "" });
+
     try {
       const context = await Word.run(async (context) => {
         const highlight = context.document.getSelection();
         highlight.load("text");
-
         await context.sync();
-        console.log(highlight.text);
         return { highlight: highlight.text, context: context };
       });
 
-      if (context.highlight.length === 0) {
-        setCommandOutput("No text selected");
-        setIdle(false);
-        setProcessing(false);
+      if (context.highlight.length === 0 || context.highlight.length > 5200) {
+        setStatus({ state: "error", message: "Invalid text length" });
         return;
       }
 
-      if (context.highlight.length > 5200) {
-        setCommandOutput(`Character count ${context.highlight.length} (max 5200)`);
-        setIdle(false);
-        setProcessing(false);
-        return;
-      }
-
-      let prompt = "";
-      // Change the prompt based on the action
-      switch (action) {
-        case "summarize":
-          prompt = `summarize the following text:\n ${context.highlight}`;
-          break;
-        case "translate":
-          prompt = `translate this text: \n ${context.highlight} /n/n to ${selectedLanguage}`;
-          break;
-        case "elaborate":
-          prompt = `elaborate this text by adding context and intricacy:\n ${context.highlight}`;
-          break;
-        case "shorten":
-          prompt = `shorten this text by half its length:\n ${context.highlight}`;
-          break;
-        case "lengthen":
-          prompt = `lengthen this text by 50% its current length:\n ${context.highlight}`;
-          break;
-        default:
-          break;
-      }
-
-      const result = await axios.post("https://us-central1-cindyai.cloudfunctions.net/openai-cindy-request", {
-        prompt: prompt,
-      });
-
-      // it would be a good idea to combine the following two lines into one function by adding split to the result text and replace all the charArray with resultText
-      let resultText = result.data.choices[0].text.trim();
-      let charArray = resultText.split("");
+      const resultText = await fetchAndProcessText(action, context);
+      console.log("Result Text: " + resultText);
 
       await Word.run(context.context, async (newContext) => {
         const selection = newContext.document.getSelection();
         selection.insertText("", Word.InsertLocation.replace);
         await newContext.sync();
 
-        // reduce app state to one function that has finite state
-        setProcessing(false);
-        setIdle(false);
-        setCommandOutput("Success!");
-
-        // this is a hacky way to get the text to type out one character at a time
-        for (let i = 0; i < charArray.length; i++) {
-          await new Promise((resolve) => setTimeout(resolve, 10));
-          selection.insertText(charArray[i], Word.InsertLocation.end);
+        // Typing out the text character by character
+        for (let char of resultText) {
+          await new Promise((resolve) => setTimeout(resolve, 2)); // Adjust the timeout to control typing speed
+          selection.insertText(char, Word.InsertLocation.end);
           await newContext.sync();
         }
       });
 
-      setIdle(true);
-      setCommandOutput("");
+      statusSetter("idle", "Success!");
+      doAfterTime(3000, () => {
+        statusSetter("idle", "Waiting...");
+      });
     } catch (error) {
       console.error(error);
-      setCommandOutput("Error!");
-    } finally {
-      setProcessing(false);
+      statusSetter("error", "Error");
+    }
+  };
+
+  function statusSetter(state, message) {
+    setStatus({ state: state, message: message });
+  }
+
+  function doAfterTime(time, callback) {
+    setTimeout(callback, time);
+  }
+
+  const renderStatus = () => {
+    switch (status.state) {
+      case "processing":
+        return "Processing...";
+      case "idle":
+        return status.message;
+      case "error":
+        return status.message;
+      default:
+        return "";
     }
   };
 
@@ -134,7 +134,14 @@ const ModificationForm = () => {
           width: "200px",
           textAlign: "center",
           marginTop: "10px",
-          color: commandOutput === "Success!" ? "green" : "Processing..." ? "black" : "red",
+          color:
+            status.state === "idle" && status.message === "Success!"
+              ? "green"
+              : status.state === "processing"
+              ? "black"
+              : status.state === "error"
+              ? "red"
+              : "black",
           borderRadius: "2px",
           margin: "2%",
           width: "90%",
@@ -153,7 +160,7 @@ const ModificationForm = () => {
           Status:{" "}
         </strong>
         <p className="status-output" style={{ margin: 0, textAlign: "center" }}>
-          {processing ? "Processing..." : idle ? "Idle" : commandOutput}
+          {renderStatus()}
         </p>
       </div>
       <h4>Formatting</h4>
@@ -172,14 +179,14 @@ const ModificationForm = () => {
           <DefaultButton
             style={{ marginBottom: "6%", width: "50%" }}
             onClick={(e) => handleClick("summarize", e)}
-            disabled={processing}
+            disabled={status.state === "processing"}
           >
             Summarize
           </DefaultButton>
           <DefaultButton
             style={{ marginBottom: "2%", width: "50%" }}
             onClick={(e) => handleClick("elaborate", e)}
-            disabled={processing}
+            disabled={status.state === "processing"}
           >
             Elaborate
           </DefaultButton>
@@ -198,14 +205,14 @@ const ModificationForm = () => {
           <DefaultButton
             style={{ marginBottom: "6%", width: "50%" }}
             onClick={(e) => handleClick("shorten", e)}
-            disabled={processing}
+            disabled={status.state === "processing"}
           >
             Shorten
           </DefaultButton>
           <DefaultButton
             style={{ marginBottom: "2%", width: "50%" }}
             onClick={(e) => handleClick("lengthen", e)}
-            disabled={processing}
+            disabled={status.state === "processing"}
           >
             Lengthen
           </DefaultButton>
@@ -219,7 +226,7 @@ const ModificationForm = () => {
           options={languageOptions}
           onChange={(_, option) => setSelectedLanguage(option.key)}
         />
-        <DefaultButton onClick={(e) => handleClick("translate", e)} disabled={!selectedLanguage || processing}>
+        <DefaultButton onClick={(e) => handleClick("translate", e)} disabled={status.state === "processing"}>
           Translate
         </DefaultButton>
       </div>
