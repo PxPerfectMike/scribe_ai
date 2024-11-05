@@ -15,6 +15,7 @@ import {
 import Header from "./Header";
 import logo from "../../../assets/full_logo.png";
 import { calculateMaxChars, estimateTokens, AVAILABLE_TOKENS, languageTokenMultipliers } from "./tokenUtils";
+import { useThrottledRequest } from "./useThrottledRequest";
 
 const ModificationForm = () => {
   // Constants
@@ -38,6 +39,17 @@ const ModificationForm = () => {
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" "),
   }));
+
+  // API request handler with throttling
+  const handleApiRequest = async (prompt) => {
+    const response = await axios.post(API_ENDPOINT, { prompt });
+    if (!response.data?.choices?.[0]?.message?.content) {
+      throw new Error("Invalid response from API");
+    }
+    return response.data.choices[0].message.content.trim();
+  };
+
+  const { throttledRequest } = useThrottledRequest(handleApiRequest);
 
   // Effect to monitor selected text
   useEffect(() => {
@@ -129,22 +141,17 @@ const ModificationForm = () => {
         throw new Error("Please select a target language");
       }
 
-      const response = await axios.post(API_ENDPOINT, {
-        prompt: getPromptForAction(action, selectedText),
-      });
+      const prompt = getPromptForAction(action, selectedText);
+      const resultText = await throttledRequest(prompt);
 
-      if (!response.data?.choices?.[0]?.message?.content) {
-        throw new Error("Invalid response from API");
+      if (resultText) {
+        await Word.run(async (context) => {
+          await processText(resultText, context);
+        });
+
+        setStatus({ state: "success", message: "Changes applied successfully!" });
+        setTimeout(() => setStatus({ state: "idle", message: "Ready" }), 3000);
       }
-
-      const resultText = response.data.choices[0].message.content.trim();
-
-      await Word.run(async (context) => {
-        await processText(resultText, context);
-      });
-
-      setStatus({ state: "success", message: "Changes applied successfully!" });
-      setTimeout(() => setStatus({ state: "idle", message: "Ready" }), 3000);
     } catch (error) {
       console.error("Operation failed:", error);
       const errorMessage = error.response?.data?.error || error.message || "An unexpected error occurred";
@@ -268,7 +275,10 @@ const ModificationForm = () => {
               onClick={(e) => handleClick("summarize", e)}
               disabled={status.state === "processing"}
               styles={{
-                root: { width: "120px", margin: "5px" },
+                root: {
+                  width: "120px",
+                  margin: "5px",
+                },
               }}
             />
             <DefaultButton
@@ -276,7 +286,10 @@ const ModificationForm = () => {
               onClick={(e) => handleClick("elaborate", e)}
               disabled={status.state === "processing"}
               styles={{
-                root: { width: "120px", margin: "5px" },
+                root: {
+                  width: "120px",
+                  margin: "5px",
+                },
               }}
             />
             <DefaultButton
@@ -284,7 +297,10 @@ const ModificationForm = () => {
               onClick={(e) => handleClick("shorten", e)}
               disabled={status.state === "processing"}
               styles={{
-                root: { width: "120px", margin: "5px" },
+                root: {
+                  width: "120px",
+                  margin: "5px",
+                },
               }}
             />
             <DefaultButton
@@ -292,7 +308,10 @@ const ModificationForm = () => {
               onClick={(e) => handleClick("lengthen", e)}
               disabled={status.state === "processing"}
               styles={{
-                root: { width: "120px", margin: "5px" },
+                root: {
+                  width: "120px",
+                  margin: "5px",
+                },
               }}
             />
           </div>
@@ -321,7 +340,9 @@ const ModificationForm = () => {
               onClick={(e) => handleClick("translate", e)}
               disabled={!selectedLanguage || status.state === "processing"}
               styles={{
-                root: { width: "120px" },
+                root: {
+                  width: "120px",
+                },
               }}
             />
           </div>
