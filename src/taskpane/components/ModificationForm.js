@@ -1,12 +1,29 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import axios from "axios";
-import { DefaultButton, Dropdown } from "@fluentui/react";
+import {
+  DefaultButton,
+  Dropdown,
+  MessageBar,
+  MessageBarType,
+  Spinner,
+  SpinnerSize,
+  Stack,
+  StackItem,
+} from "@fluentui/react";
 import Header from "./Header";
 import logo from "../../../assets/full_logo.png";
 
 const ModificationForm = () => {
-  const [status, setStatus] = useState({ state: "idle", message: "Waiting..." });
+  // Constants
+  const MAX_TEXT_LENGTH = 5200;
+  const TYPING_SPEED = 2;
+  const API_ENDPOINT = "https://us-central1-cindyai.cloudfunctions.net/openai-cindy-request";
+
+  // State management
+  const [status, setStatus] = useState({ state: "idle", message: "Ready" });
   const [selectedLanguage, setSelectedLanguage] = useState(null);
+  const [error, setError] = useState(null);
+  const [charCount, setCharCount] = useState(0);
 
   const languageOptions = [
     { key: "chinese-simplified", text: "Chinese (Simplified)" },
@@ -26,92 +43,117 @@ const ModificationForm = () => {
     { key: "vietnamese", text: "Vietnamese" },
   ];
 
-  const fetchAndProcessText = async (action, context) => {
-    let prompt = getPromptForAction(action, context.highlight);
-    const result = await axios.post("https://us-central1-cindyai.cloudfunctions.net/openai-cindy-request", { prompt });
-    return result.data.choices[0].text.trim();
-  };
+  const getPromptForAction = useCallback(
+    (action, text) => {
+      const prompts = {
+        summarize: `Generate a concise summary of this text, maintaining key points and main ideas: ${text}`,
+        translate: `Translate this text to ${selectedLanguage}, maintaining the original tone and meaning: ${text}`,
+        elaborate: `Expand and enhance this text with additional details and context while maintaining its core message: ${text}`,
+        shorten: `Create a shorter version of this text while preserving its essential meaning: ${text}`,
+        lengthen: `Thoughtfully expand this text by adding relevant details and context: ${text}`,
+      };
+      return prompts[action] || "";
+    },
+    [selectedLanguage]
+  );
 
-  const getPromptForAction = (action, text) => {
-    switch (action) {
-      case "summarize":
-        return `summarize the following text:\n ${text}`;
-      case "translate":
-        return `translate this text: \n ${text} /n/n to ${selectedLanguage}`;
-      case "elaborate":
-        return `elaborate this text by adding context and intricacy:\n ${text}`;
-      case "shorten":
-        return `shorten this text by half its length:\n ${text}`;
-      case "lengthen":
-        return `lengthen this text by 50% its current length:\n ${text}`;
-      default:
-        return "";
+  const processText = async (text, newContext) => {
+    const selection = newContext.document.getSelection();
+    selection.insertText("", Word.InsertLocation.replace);
+    await newContext.sync();
+
+    for (let char of text) {
+      await new Promise((resolve) => setTimeout(resolve, TYPING_SPEED));
+      selection.insertText(char, Word.InsertLocation.end);
+      await newContext.sync();
     }
   };
 
   const handleClick = async (action, e) => {
     e.preventDefault();
-    setStatus({ state: "processing", message: "" });
+    setError(null);
+    setStatus({ state: "processing", message: "Processing your request..." });
 
     try {
+      // Get selected text
       const context = await Word.run(async (context) => {
         const highlight = context.document.getSelection();
         highlight.load("text");
         await context.sync();
-        return { highlight: highlight.text, context: context };
+        return { highlight: highlight.text, context };
       });
 
-      if (context.highlight.length === 0 || context.highlight.length > 5200) {
-        setStatus({ state: "error", message: "Invalid text length" });
-        return;
+      // Validate text selection
+      if (!context.highlight) {
+        throw new Error("Please select some text first");
       }
 
-      const resultText = await fetchAndProcessText(action, context);
-      console.log("Result Text: " + resultText);
+      if (context.highlight.length > MAX_TEXT_LENGTH) {
+        throw new Error(`Selected text must be less than ${MAX_TEXT_LENGTH} characters`);
+      }
 
+      if (action === "translate" && !selectedLanguage) {
+        throw new Error("Please select a target language");
+      }
+
+      // Make API request
+      const response = await axios.post(API_ENDPOINT, {
+        prompt: getPromptForAction(action, context.highlight),
+      });
+
+      // Extract the response text from the GPT-3.5 response
+      const resultText = response.data.choices[0].message.content.trim();
+
+      // Apply changes to document
       await Word.run(context.context, async (newContext) => {
-        const selection = newContext.document.getSelection();
-        selection.insertText("", Word.InsertLocation.replace);
-        await newContext.sync();
-
-        // Typing out the text character by character
-        for (let char of resultText) {
-          await new Promise((resolve) => setTimeout(resolve, 2)); // Adjust the timeout to control typing speed
-          selection.insertText(char, Word.InsertLocation.end);
-          await newContext.sync();
-        }
+        await processText(resultText, newContext);
       });
 
-      statusSetter("idle", "Success!");
-      doAfterTime(3000, () => {
-        statusSetter("idle", "Waiting...");
-      });
+      setStatus({ state: "success", message: "Changes applied successfully!" });
+      setTimeout(() => setStatus({ state: "idle", message: "Ready" }), 3000);
     } catch (error) {
-      console.error(error);
-      statusSetter("error", "Error");
+      console.error("Operation failed:", error);
+      let errorMessage = "An error occurred while processing your request";
+
+      if (error.response?.data?.error) {
+        errorMessage = error.response.data.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setError(errorMessage);
+      setStatus({ state: "error", message: "Error" });
     }
   };
 
-  function statusSetter(state, message) {
-    setStatus({ state: state, message: message });
-  }
-
-  function doAfterTime(time, callback) {
-    setTimeout(callback, time);
-  }
-
-  const renderStatus = () => {
-    switch (status.state) {
-      case "processing":
-        return "Processing...";
-      case "idle":
-        return status.message;
-      case "error":
-        return status.message;
-      default:
-        return "";
-    }
-  };
+  const renderStatusIndicator = () => (
+    <div
+      className="status-container"
+      style={{
+        border: "1px solid #ccc",
+        borderRadius: "4px",
+        padding: "0.5rem",
+        marginBottom: "1rem",
+        width: "90%",
+        backgroundColor: "#f5f5f5",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
+    >
+      <div>
+        <span style={{ fontWeight: "bold" }}>Status: </span>
+        <span
+          style={{
+            color: status.state === "success" ? "green" : status.state === "error" ? "red" : "black",
+          }}
+        >
+          {status.message}
+        </span>
+      </div>
+      {status.state === "processing" && <Spinner size={SpinnerSize.small} />}
+    </div>
+  );
 
   return (
     <div
@@ -119,117 +161,106 @@ const ModificationForm = () => {
       style={{
         display: "flex",
         flexDirection: "column",
-        justifyContent: "center",
+        justifyContent: "flex-start",
         alignItems: "center",
         background: "linear-gradient(#00a1ff, #f5f5f5, #f5f5f5, #08A04B)",
-        height: "100%", // used to be 100vh and might need to go back to that
+        height: "100%",
+        padding: "1rem",
+        overflow: "auto",
       }}
     >
-      <div className="header">
-        <Header logo={logo} />
-      </div>
-      <div
-        style={{
-          border: "1px solid black",
-          width: "200px",
-          textAlign: "center",
-          marginTop: "10px",
-          color:
-            status.state === "idle" && status.message === "Success!"
-              ? "green"
-              : status.state === "processing"
-              ? "black"
-              : status.state === "error"
-              ? "red"
-              : "black",
-          borderRadius: "2px",
-          margin: "2%",
-          width: "90%",
-          backgroundColor: "#f5f5f5",
-        }}
-      >
-        <strong
-          style={{
-            color: "white",
-            float: "left",
-            width: "20%",
-            margin: 0,
-            backgroundColor: "gray",
-          }}
+      <Header logo={logo} />
+
+      {error && (
+        <MessageBar
+          messageBarType={MessageBarType.error}
+          isMultiline={false}
+          dismissButtonAriaLabel="Close"
+          onDismiss={() => setError(null)}
+          style={{ marginBottom: "1rem", width: "90%" }}
         >
-          Status:{" "}
-        </strong>
-        <p className="status-output" style={{ margin: 0, textAlign: "center" }}>
-          {renderStatus()}
-        </p>
-      </div>
-      <h4>Formatting</h4>
-      <div className="formatting-section" style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-        <div
-          className="restructure-buttons"
-          style={{
-            paddingY: "2%",
-            display: "flex",
-            flexDirection: "column",
-            width: "auto",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <DefaultButton
-            style={{ marginBottom: "6%", width: "50%" }}
-            onClick={(e) => handleClick("summarize", e)}
-            disabled={status.state === "processing"}
+          {error}
+        </MessageBar>
+      )}
+
+      {renderStatusIndicator()}
+
+      <Stack tokens={{ childrenGap: 20 }}>
+        <StackItem>
+          <h4 style={{ textAlign: "center", margin: "0 0 10px 0" }}>Text Modification</h4>
+          <div
+            className="formatting-section"
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: "10px",
+            }}
           >
-            Summarize
-          </DefaultButton>
-          <DefaultButton
-            style={{ marginBottom: "2%", width: "50%" }}
-            onClick={(e) => handleClick("elaborate", e)}
-            disabled={status.state === "processing"}
+            <DefaultButton
+              text="Summarize"
+              onClick={(e) => handleClick("summarize", e)}
+              disabled={status.state === "processing"}
+              styles={{
+                root: { width: "120px", margin: "5px" },
+              }}
+            />
+            <DefaultButton
+              text="Elaborate"
+              onClick={(e) => handleClick("elaborate", e)}
+              disabled={status.state === "processing"}
+              styles={{
+                root: { width: "120px", margin: "5px" },
+              }}
+            />
+            <DefaultButton
+              text="Shorten"
+              onClick={(e) => handleClick("shorten", e)}
+              disabled={status.state === "processing"}
+              styles={{
+                root: { width: "120px", margin: "5px" },
+              }}
+            />
+            <DefaultButton
+              text="Lengthen"
+              onClick={(e) => handleClick("lengthen", e)}
+              disabled={status.state === "processing"}
+              styles={{
+                root: { width: "120px", margin: "5px" },
+              }}
+            />
+          </div>
+        </StackItem>
+
+        <StackItem>
+          <h4 style={{ textAlign: "center", margin: "0 0 10px 0" }}>Translation</h4>
+          <div
+            className="translate-section"
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "10px",
+            }}
           >
-            Elaborate
-          </DefaultButton>
-        </div>
-        <div
-          className="length-buttons"
-          style={{
-            paddingY: "2%",
-            display: "flex",
-            flexDirection: "column",
-            width: "auto",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <DefaultButton
-            style={{ marginBottom: "6%", width: "50%" }}
-            onClick={(e) => handleClick("shorten", e)}
-            disabled={status.state === "processing"}
-          >
-            Shorten
-          </DefaultButton>
-          <DefaultButton
-            style={{ marginBottom: "2%", width: "50%" }}
-            onClick={(e) => handleClick("lengthen", e)}
-            disabled={status.state === "processing"}
-          >
-            Lengthen
-          </DefaultButton>
-        </div>
-      </div>
-      <div className="translate-section" style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <h4>Translation</h4>
-        <Dropdown
-          style={{ marginBottom: "5%" }}
-          placeholder="Select a language"
-          options={languageOptions}
-          onChange={(_, option) => setSelectedLanguage(option.key)}
-        />
-        <DefaultButton onClick={(e) => handleClick("translate", e)} disabled={status.state === "processing"}>
-          Translate
-        </DefaultButton>
-      </div>
+            <Dropdown
+              style={{ width: "200px" }}
+              placeholder="Select a language"
+              options={languageOptions}
+              onChange={(_, option) => setSelectedLanguage(option.key)}
+              disabled={status.state === "processing"}
+            />
+            <DefaultButton
+              text="Translate"
+              onClick={(e) => handleClick("translate", e)}
+              disabled={!selectedLanguage || status.state === "processing"}
+              styles={{
+                root: { width: "120px" },
+              }}
+            />
+          </div>
+        </StackItem>
+      </Stack>
     </div>
   );
 };

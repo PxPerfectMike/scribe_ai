@@ -29,6 +29,10 @@ module.exports = async (env, options) => {
     resolve: {
       extensions: [".ts", ".tsx", ".html", ".js"],
       alias: { "react-dom": "@hot-loader/react-dom" },
+      fallback: {
+        process: require.resolve("process/browser"),
+        os: require.resolve("os-browserify/browser"),
+      },
     },
     module: {
       rules: [
@@ -60,8 +64,14 @@ module.exports = async (env, options) => {
       ],
     },
     plugins: [
+      new webpack.ProvidePlugin({
+        process: "process/browser",
+      }),
       new webpack.DefinePlugin({
-        "process.env.REACT_APP_OPENAI_API_KEY": JSON.stringify(process.env.REACT_APP_OPENAI_API_KEY),
+        "process.env": JSON.stringify({
+          NODE_ENV: dev ? "development" : "production",
+          API_ENDPOINT: "https://us-central1-cindyai.cloudfunctions.net/openai-cindy-request",
+        }),
       }),
       new CopyWebpackPlugin({
         patterns: [
