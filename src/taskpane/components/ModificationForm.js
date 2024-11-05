@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import axios from "axios";
 import {
   DefaultButton,
@@ -9,13 +9,15 @@ import {
   SpinnerSize,
   Stack,
   StackItem,
+  Text,
+  TeachingBubble,
 } from "@fluentui/react";
 import Header from "./Header";
 import logo from "../../../assets/full_logo.png";
+import { calculateMaxChars, estimateTokens, AVAILABLE_TOKENS, languageTokenMultipliers } from "./tokenUtils";
 
 const ModificationForm = () => {
   // Constants
-  const MAX_TEXT_LENGTH = 5200;
   const TYPING_SPEED = 2;
   const API_ENDPOINT = "https://us-central1-cindyai.cloudfunctions.net/openai-cindy-request";
 
@@ -24,24 +26,46 @@ const ModificationForm = () => {
   const [selectedLanguage, setSelectedLanguage] = useState(null);
   const [error, setError] = useState(null);
   const [charCount, setCharCount] = useState(0);
+  const [showTeachingBubble, setShowTeachingBubble] = useState(false);
+  const [selectedText, setSelectedText] = useState("");
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [maxChars, setMaxChars] = useState(calculateMaxChars("english"));
 
-  const languageOptions = [
-    { key: "chinese-simplified", text: "Chinese (Simplified)" },
-    { key: "chinese-traditional", text: "Chinese (Traditional)" },
-    { key: "english", text: "English" },
-    { key: "spanish", text: "Spanish" },
-    { key: "french", text: "French" },
-    { key: "german", text: "German" },
-    { key: "italian", text: "Italian" },
-    { key: "portuguese", text: "Portuguese" },
-    { key: "russian", text: "Russian" },
-    { key: "japanese", text: "Japanese" },
-    { key: "korean", text: "Korean" },
-    { key: "arabic", text: "Arabic" },
-    { key: "hindi", text: "Hindi" },
-    { key: "hebrew", text: "Hebrew" },
-    { key: "vietnamese", text: "Vietnamese" },
-  ];
+  const languageOptions = Object.keys(languageTokenMultipliers).map((lang) => ({
+    key: lang,
+    text: lang
+      .split("-")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" "),
+  }));
+
+  // Effect to monitor selected text
+  useEffect(() => {
+    const checkSelection = async () => {
+      try {
+        await Word.run(async (context) => {
+          const selection = context.document.getSelection();
+          selection.load("text");
+          await context.sync();
+
+          const text = selection.text;
+          setSelectedText(text);
+          setCharCount(text.length);
+        });
+      } catch (error) {
+        console.error("Error checking selection:", error);
+      }
+    };
+
+    const interval = setInterval(checkSelection, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Update character limit when language changes
+  useEffect(() => {
+    const newMaxChars = calculateMaxChars(selectedLanguage);
+    setMaxChars(newMaxChars);
+  }, [selectedLanguage]);
 
   const getPromptForAction = useCallback(
     (action, text) => {
@@ -62,97 +86,139 @@ const ModificationForm = () => {
     selection.insertText("", Word.InsertLocation.replace);
     await newContext.sync();
 
+    const totalChars = text.length;
+    let processedChars = 0;
+
     for (let char of text) {
       await new Promise((resolve) => setTimeout(resolve, TYPING_SPEED));
       selection.insertText(char, Word.InsertLocation.end);
       await newContext.sync();
+
+      processedChars++;
+      setProcessingProgress(Math.round((processedChars / totalChars) * 100));
     }
   };
 
   const handleClick = async (action, e) => {
     e.preventDefault();
     setError(null);
+    setProcessingProgress(0);
     setStatus({ state: "processing", message: "Processing your request..." });
 
     try {
-      // Get selected text
-      const context = await Word.run(async (context) => {
-        const highlight = context.document.getSelection();
-        highlight.load("text");
-        await context.sync();
-        return { highlight: highlight.text, context };
-      });
-
-      // Validate text selection
-      if (!context.highlight) {
+      if (!selectedText) {
         throw new Error("Please select some text first");
       }
 
-      if (context.highlight.length > MAX_TEXT_LENGTH) {
-        throw new Error(`Selected text must be less than ${MAX_TEXT_LENGTH} characters`);
+      const actionMaxChars = calculateMaxChars(selectedLanguage, action);
+      if (charCount > actionMaxChars) {
+        throw new Error(
+          `Selected text is too long. Maximum length is ${actionMaxChars.toLocaleString()} characters for ${
+            selectedLanguage || "English"
+          } (current: ${charCount.toLocaleString()})`
+        );
+      }
+
+      const tokens = estimateTokens(selectedText, selectedLanguage);
+      if (tokens > AVAILABLE_TOKENS) {
+        throw new Error(`Selected text is too long. Please select less text.`);
       }
 
       if (action === "translate" && !selectedLanguage) {
+        setShowTeachingBubble(true);
         throw new Error("Please select a target language");
       }
 
-      // Make API request
       const response = await axios.post(API_ENDPOINT, {
-        prompt: getPromptForAction(action, context.highlight),
+        prompt: getPromptForAction(action, selectedText),
       });
 
-      // Extract the response text from the GPT-3.5 response
+      if (!response.data?.choices?.[0]?.message?.content) {
+        throw new Error("Invalid response from API");
+      }
+
       const resultText = response.data.choices[0].message.content.trim();
 
-      // Apply changes to document
-      await Word.run(context.context, async (newContext) => {
-        await processText(resultText, newContext);
+      await Word.run(async (context) => {
+        await processText(resultText, context);
       });
 
       setStatus({ state: "success", message: "Changes applied successfully!" });
       setTimeout(() => setStatus({ state: "idle", message: "Ready" }), 3000);
     } catch (error) {
       console.error("Operation failed:", error);
-      let errorMessage = "An error occurred while processing your request";
-
-      if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
+      const errorMessage = error.response?.data?.error || error.message || "An unexpected error occurred";
       setError(errorMessage);
       setStatus({ state: "error", message: "Error" });
+
+      if (process.env.NODE_ENV === "development") {
+        console.log("Token debug info:", {
+          estimatedTokens: estimateTokens(selectedText, selectedLanguage),
+          maxTokens: AVAILABLE_TOKENS,
+          language: selectedLanguage,
+          textLength: selectedText.length,
+        });
+      }
     }
   };
 
   const renderStatusIndicator = () => (
-    <div
-      className="status-container"
-      style={{
-        border: "1px solid #ccc",
-        borderRadius: "4px",
-        padding: "0.5rem",
-        marginBottom: "1rem",
-        width: "90%",
-        backgroundColor: "#f5f5f5",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}
-    >
-      <div>
-        <span style={{ fontWeight: "bold" }}>Status: </span>
-        <span
+    <Stack tokens={{ childrenGap: 10 }} style={{ width: "90%" }}>
+      <div
+        className="status-container"
+        style={{
+          border: "1px solid #ccc",
+          borderRadius: "4px",
+          padding: "0.5rem",
+          backgroundColor: "#f5f5f5",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <div>
+          <span style={{ fontWeight: "bold" }}>Status: </span>
+          <span
+            style={{
+              color: status.state === "success" ? "green" : status.state === "error" ? "red" : "black",
+            }}
+          >
+            {status.message}
+          </span>
+        </div>
+        {status.state === "processing" && <Spinner size={SpinnerSize.small} />}
+      </div>
+
+      {status.state === "processing" && (
+        <Stack.Item>
+          <div style={{ width: "100%", backgroundColor: "#f0f0f0", borderRadius: "4px" }}>
+            <div
+              style={{
+                width: `${processingProgress}%`,
+                height: "4px",
+                backgroundColor: "#0078d4",
+                borderRadius: "4px",
+                transition: "width 0.3s ease-in-out",
+              }}
+            />
+          </div>
+          <Text variant="small" style={{ textAlign: "center" }}>
+            {processingProgress}% complete
+          </Text>
+        </Stack.Item>
+      )}
+
+      <Stack.Item>
+        <Text
+          variant="small"
           style={{
-            color: status.state === "success" ? "green" : status.state === "error" ? "red" : "black",
+            color: charCount > maxChars ? "red" : charCount > maxChars * 0.8 ? "orange" : "black",
           }}
         >
-          {status.message}
-        </span>
-      </div>
-      {status.state === "processing" && <Spinner size={SpinnerSize.small} />}
-    </div>
+          Characters: {charCount.toLocaleString()} / {maxChars.toLocaleString()}
+        </Text>
+      </Stack.Item>
+    </Stack>
   );
 
   return (
@@ -261,6 +327,16 @@ const ModificationForm = () => {
           </div>
         </StackItem>
       </Stack>
+
+      {showTeachingBubble && (
+        <TeachingBubble
+          target=".translate-section"
+          headline="Select a Language"
+          onDismiss={() => setShowTeachingBubble(false)}
+        >
+          Please select a target language before translating
+        </TeachingBubble>
+      )}
     </div>
   );
 };
